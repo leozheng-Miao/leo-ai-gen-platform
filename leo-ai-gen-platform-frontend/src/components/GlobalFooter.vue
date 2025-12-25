@@ -1,56 +1,37 @@
 <template>
-  <a-layout-footer class="global-footer">
+  <a-layout-footer class="footer">
     <div class="footer-content">
-      编程导航原创项目 by
-      <a href="https://www.codefather.cn" target="_blank" rel="noopener noreferrer">
-        程序员鱼皮
-      </a>
+      <p class="copyright">
+        <a
+          href="https://www.codefather.cn"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="author-link"
+        >
+          编程导航原创项目 by 程序员鱼皮
+        </a>
+      </p>
     </div>
   </a-layout-footer>
 </template>
 
 <script setup lang="ts">
-// 页脚组件，无需额外逻辑
+// 无需额外的响应式数据
 </script>
 
-<style scoped lang="css">
-.global-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  padding: 16px 24px;
+<style scoped>
+.footer {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
   text-align: center;
-  background: #f0f2f5;
-  border-top: 1px solid #e8e8e8;
+  padding: 20px;
+  margin-top: 40px;
+  border-top: 1px solid rgba(102, 126, 234, 0.1);
 }
 
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
+.copyright {
+  margin: 0;
   color: #666;
   font-size: 14px;
-}
-
-.footer-content a {
-  color: #1890ff;
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.footer-content a:hover {
-  color: #40a9ff;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .global-footer {
-    padding: 12px 16px;
-  }
-
-  .footer-content {
-    font-size: 12px;
-  }
 }
 </style>

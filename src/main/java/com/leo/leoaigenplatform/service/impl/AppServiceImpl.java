@@ -105,13 +105,13 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
         String appName = appAddRequest.getAppName();
         String initPrompt = appAddRequest.getInitPrompt();
+        if (StrUtil.isBlank(appName)) {
+            appName = initPrompt.substring(0, 7);
+        }
 
         // 校验参数
         if (StrUtil.isBlank(initPrompt)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "initPrompt不能为空");
-        }
-        if (StrUtil.isBlank(appName)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "应用名称不能为空");
         }
 
         // 获取当前登录用户
@@ -122,6 +122,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         BeanUtil.copyProperties(appAddRequest, app);
         app.setUserId(loginUser.getId());
         app.setCodeGenType(CodeGenType.MULTI_FILE.getCode());
+        app.setAppName(appName);
         boolean save = this.save(app);
         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "创建应用失败");
         return app.getId();

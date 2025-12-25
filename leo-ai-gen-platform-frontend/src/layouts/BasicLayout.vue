@@ -2,48 +2,29 @@
   <a-layout class="basic-layout">
     <!-- 顶部导航栏 -->
     <GlobalHeader />
-
-    <!-- 内容区域 -->
-    <a-layout-content class="layout-content">
-      <div class="content-wrapper">
-        <RouterView />
-      </div>
+    <!-- 主要内容区域 -->
+    <a-layout-content class="main-content">
+      <router-view />
     </a-layout-content>
-
-    <!-- 底部页脚 -->
+    <!-- 底部版权信息 -->
     <GlobalFooter />
   </a-layout>
 </template>
 
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
 import GlobalHeader from '@/components/GlobalHeader.vue'
 import GlobalFooter from '@/components/GlobalFooter.vue'
 </script>
 
-<style scoped lang="css">
+<style scoped>
 .basic-layout {
-  min-height: 100vh;
+  background: none;
 }
 
-.layout-content {
-  margin-top: 64px; /* 为固定头部留出空间 */
-  margin-bottom: 64px; /* 为固定底部留出空间 */
-  padding: 24px;
-  background: #fff;
-  min-height: calc(100vh - 128px);
-}
-
-.content-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .layout-content {
-    padding: 16px;
-    margin-bottom: 56px;
-  }
+.main-content {
+  width: 100%;
+  padding: 0;
+  background: none;
+  margin: 0;
 }
 </style>
