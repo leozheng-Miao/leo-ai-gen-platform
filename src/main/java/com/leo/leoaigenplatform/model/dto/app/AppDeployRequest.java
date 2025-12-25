@@ -13,7 +13,7 @@ import java.io.Serializable;
 @Data
 public class AppDeployRequest implements Serializable {
 
-    Long id;
+    private Long id;
 
     private static final long serialVersionUID = 1L;
 
