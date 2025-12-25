@@ -12,7 +12,6 @@
         v-model:selectedKeys="selectedKeys"
         mode="horizontal"
         :items="menuItems"
-        class="header-menu"
         @click="handleMenuClick"
       />
 
@@ -44,9 +43,6 @@ const menuItems: MenuProps['items'] = [
   },
 ]
 
-// 当前选中的菜单项
-const selectedKeys = ref<string[]>([route.path])
-
 // 监听路由变化，更新选中的菜单项
 watch(
   () => route.path,
@@ -55,9 +51,21 @@ watch(
   },
 )
 
-// 菜单点击处理
+// 当前选中菜单
+const selectedKeys = ref<string[]>(['/'])
+// 监听路由变化，更新当前选中菜单
+router.afterEach((to, from, next) => {
+  selectedKeys.value = [to.path]
+})
+
+// 处理菜单点击
 const handleMenuClick: MenuProps['onClick'] = (e) => {
-  router.push(e.key as string)
+  const key = e.key as string
+  selectedKeys.value = [key]
+  // 跳转到对应页面
+  if (key.startsWith('/')) {
+    router.push(key)
+  }
 }
 
 // 登录按钮处理
