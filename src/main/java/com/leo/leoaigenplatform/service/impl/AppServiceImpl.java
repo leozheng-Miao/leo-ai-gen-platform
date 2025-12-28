@@ -13,24 +13,32 @@ import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
 import com.leo.leoaigenplatform.exception.ThrowUtils;
 import com.leo.leoaigenplatform.mapper.AppMapper;
-import com.leo.leoaigenplatform.model.dto.app.*;
+import com.leo.leoaigenplatform.model.dto.app.AppAddRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppAdminQueryRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppAdminUpdateRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppQueryRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppUpdateRequest;
 import com.leo.leoaigenplatform.model.dto.user.LoginUser;
 import com.leo.leoaigenplatform.model.entity.App;
 import com.leo.leoaigenplatform.model.entity.User;
 import com.leo.leoaigenplatform.model.enums.CodeGenType;
+import com.leo.leoaigenplatform.model.enums.MessageType;
 import com.leo.leoaigenplatform.model.vo.AppVO;
 import com.leo.leoaigenplatform.model.vo.UserVO;
 import com.leo.leoaigenplatform.service.AppService;
+import com.leo.leoaigenplatform.service.ChatHistoryService;
 import com.leo.leoaigenplatform.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +53,7 @@ import java.util.stream.Collectors;
  * @since 1.0.1
  */
 @Service
+@Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
     @Resource
@@ -53,8 +62,11 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private AiGenCodeFacade aiGenCodeFacade;
 
+    @Resource
+    private ChatHistoryService chatHistoryService;
+
     @Override
-    public Flux<String> chatToGEnCode(String userMessage, Long appId, LoginUser loginUser) {
+    public Flux<String> chatToGenCode(String userMessage, Long appId, LoginUser loginUser) {
         ThrowUtils.throwIf(StrUtil.isBlank(userMessage), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
         ThrowUtils.throwIf(appId == null, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
         ThrowUtils.throwIf(appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID必须大于0");
@@ -64,7 +76,33 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         String codeGenType = currApp.getCodeGenType();
         CodeGenType type = CodeGenType.of(codeGenType);
         ThrowUtils.throwIf(type == null, ErrorCode.PARAMS_ERROR, "不支持的代码生成类型");
-        return aiGenCodeFacade.generateAndSaveCodeStream(userMessage, type, appId);
+
+        // 存储用户消息 userMessage
+        chatHistoryService.addChatMessage(appId, userMessage, MessageType.USER.getValue(), loginUser.getId(), null);
+
+        // 存储 AI 消息 aiMessage
+        Flux<String> AIMessageStream = aiGenCodeFacade.generateAndSaveCodeStream(userMessage, type, appId);
+        StringBuilder codeBuilder = new StringBuilder();
+        return AIMessageStream
+                .map(chunk -> {
+                    codeBuilder.append(chunk);
+                    return chunk;
+                })
+                .doOnComplete(() -> {
+                    try {
+                        String completeCode = codeBuilder.toString();
+                        if (StrUtil.isNotBlank(completeCode)) {
+                            chatHistoryService.addChatMessage(appId, completeCode, MessageType.AI.getValue(), loginUser.getId(), null);
+                        }
+                    } catch (Exception e) {
+                        log.error("文件保存失败: {}", e.getMessage());
+                    }
+                })
+                .doOnError(e -> {
+                    String errorMessage = "AI生成代码失败: " + e.getMessage();
+                    chatHistoryService.addChatMessage(appId, errorMessage, MessageType.AI.getValue(), loginUser.getId(), null);
+                    log.error("AI生成代码失败: {}", e.getMessage());
+                });
     }
 
     @Override
@@ -170,10 +208,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (!app.getUserId().equals(loginUser.getId()) && !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限删除此应用");
         }
-
         // 删除应用
-        boolean result = this.removeById(id);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        boolean deleteAppResult = this.removeById(id);
+        ThrowUtils.throwIf(!deleteAppResult, ErrorCode.OPERATION_ERROR);
 
         return true;
     }
@@ -251,7 +288,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 查询应用
         App app = this.getById(id);
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
-
         // 删除应用
         boolean result = this.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -438,6 +474,21 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             queryWrapper.orderBy("createTime", false);
         }
         return queryWrapper;
+    }
+
+    @Override
+    public boolean removeById(Serializable id) {
+        if (id == null) {
+            return false;
+        }
+        Long appId = Long.valueOf(id.toString());
+        // 删除应用时，同时删除对应的对话历史记录
+        try {
+            chatHistoryService.deleteChatHistoryByAppId(appId);
+        } catch (Exception e) {
+            log.error("删除应用时，删除对应的对话历史记录失败", e);
+        }
+        return super.removeById(id);
     }
 
     /**
