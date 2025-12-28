@@ -33,7 +33,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/app")
-@Slf4j
 public class AppController {
 
     @Resource
@@ -52,7 +51,6 @@ public class AppController {
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                     @RequestParam String userMessage,
                                                     HttpServletRequest request) {
-        log.info("进入 chatToGenCode 接口方法， 开始生成代码");
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(userMessage == null || userMessage.isEmpty(), ErrorCode.PARAMS_ERROR);
         LoginUser loginUser = userService.getLoginUser(request);

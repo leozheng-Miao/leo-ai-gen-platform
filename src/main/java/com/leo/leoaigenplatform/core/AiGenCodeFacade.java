@@ -1,5 +1,6 @@
 package com.leo.leoaigenplatform.core;
 
+import cn.hutool.core.util.StrUtil;
 import com.leo.leoaigenplatform.ai.AiGenCodeService;
 import com.leo.leoaigenplatform.ai.jsonModel.HTMLJsonStructure;
 import com.leo.leoaigenplatform.ai.jsonModel.MultiJsonStructure;
@@ -7,6 +8,7 @@ import com.leo.leoaigenplatform.core.parser.CodeParserExecutor;
 import com.leo.leoaigenplatform.core.saver.SaveCodeExecutor;
 import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
+import com.leo.leoaigenplatform.exception.ThrowUtils;
 import com.leo.leoaigenplatform.model.enums.CodeGenType;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -110,7 +112,16 @@ public class AiGenCodeFacade {
                         log.error("文件保存失败: {}", e.getMessage());
                     }
                 });
+    }
 
+    /**
+     * 生成应用名称
+     * @param userMessage
+     * @return
+     */
+    public String generateAppName(String userMessage) {
+        ThrowUtils.throwIf(StrUtil.isBlank(userMessage), ErrorCode.PARAMS_ERROR, "userMessage is null");
+        return aiGenCodeService.generateAppName(userMessage).getAppName();
     }
 
 }

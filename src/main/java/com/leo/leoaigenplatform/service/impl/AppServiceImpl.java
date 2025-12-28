@@ -84,9 +84,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (!originCodeFile.exists()) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "应用代码不存在");
         }
-        String targetCodePath = AppConstant.FILE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+        String localCodePath = AppConstant.FILE_DEPLOY_ROOT_DIR + File.separator + deployKey;
         try {
-            FileUtil.copyContent(originCodeFile, new File(targetCodePath), true);
+            FileUtil.copyContent(originCodeFile, new File(localCodePath), true);
         } catch (IORuntimeException e) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "部署应用转移文件失败" + e.getMessage());
         }
@@ -97,7 +97,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setDeployedTime(LocalDateTime.now());
         boolean result = this.updateById(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
-        return targetCodePath;
+        return localCodePath;
     }
 
     @Override
@@ -106,7 +106,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         String appName = appAddRequest.getAppName();
         String initPrompt = appAddRequest.getInitPrompt();
         if (StrUtil.isBlank(appName)) {
-            appName = initPrompt.substring(0, 7);
+            appName = aiGenCodeFacade.generateAppName(initPrompt);
         }
 
         // 校验参数

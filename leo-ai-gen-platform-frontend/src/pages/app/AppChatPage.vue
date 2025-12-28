@@ -313,7 +313,7 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
     // 构建URL参数
     const params = new URLSearchParams({
       appId: appId.value || '',
-      message: userMessage,
+      userMessage: userMessage,
     })
 
     const url = `${baseURL}/app/chat/gen/code?${params}`
