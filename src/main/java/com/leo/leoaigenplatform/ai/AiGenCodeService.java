@@ -34,5 +34,8 @@ public interface AiGenCodeService {
     @SystemMessage(fromResource = "prompt/gen-html-prompt.txt")
     HTMLJsonStructure generateHTMLWithChatMemory(@MemoryId int memoryId, @UserMessage String userMessage);
 
+    @SystemMessage(fromResource = "prompt/gen-vue-project-prompt.txt")
+    Flux<String> generateVueProjectStreaming(@MemoryId Long memoryId, @UserMessage String userMessage);
+
 
 }

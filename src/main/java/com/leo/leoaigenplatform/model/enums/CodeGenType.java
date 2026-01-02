@@ -25,6 +25,14 @@ public enum CodeGenType {
     MULTI_FILE(
             "multi_file",
             "生成 HTML + CSS + JS 文件"
+    ),
+
+    /**
+     * HTML + CSS + JS 多文件
+     */
+    VUE_PROJECT(
+            "vue_project",
+                    "生成 vue 工程项目"
     );
 
     /**

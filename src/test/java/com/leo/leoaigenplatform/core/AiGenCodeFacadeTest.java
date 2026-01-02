@@ -42,4 +42,15 @@ class AiGenCodeFacadeTest {
         Assertions.assertNotNull(completeContent);
 
     }
+
+    @Test
+    void generateVueProjectStream() {
+        String userMessage = "简单的任务记录网站，要求不超过200行代码";
+//        File file = aiGenCodeFacade.generateAndSaveCode(userMessage, CodeGenType.HTML);
+        Flux<String> result = aiGenCodeFacade.generateAndSaveCodeStream(userMessage, CodeGenType.VUE_PROJECT, 20L);
+        List<String> list = result.collectList().block();
+        Assertions.assertNotNull(list);
+        String completeContent = String.join("", list);
+        Assertions.assertNotNull(completeContent);
+    }
 }

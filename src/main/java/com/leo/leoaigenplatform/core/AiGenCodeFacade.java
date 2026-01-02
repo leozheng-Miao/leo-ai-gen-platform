@@ -45,7 +45,7 @@ public class AiGenCodeFacade {
         if (codeType == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "codeType is null");
         }
-        AiGenCodeService service = aiServiceAutoFactory.aiGenCodeService(appId);
+        AiGenCodeService service = aiServiceAutoFactory.getAiGenCodeService(appId);
         return switch (codeType) {
             case HTML -> {
                 HTMLJsonStructure htmlJsonStructure = service.generateHTML(userMessage);
@@ -76,7 +76,7 @@ public class AiGenCodeFacade {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "codeType is null");
         }
 
-        AiGenCodeService aiGenCodeService = aiServiceAutoFactory.aiGenCodeService(appId);
+        AiGenCodeService aiGenCodeService = aiServiceAutoFactory.getAiGenCodeService(appId, codeType);
 
         return switch (codeType) {
             case HTML -> {
@@ -86,6 +86,10 @@ public class AiGenCodeFacade {
             case MULTI_FILE -> {
                 Flux<String> result = aiGenCodeService.generateMultiStream(userMessage);
                 yield processCodeStream(result, codeType, appId);
+            }
+            case VUE_PROJECT -> {
+                Flux<String> result = aiGenCodeService.generateVueProjectStreaming(appId ,userMessage);
+                yield processCodeStream(result, CodeGenType.MULTI_FILE, appId);
             }
             default -> {
                 String errorMessage = "目前不支持此格式的类型" + codeType.getCode();

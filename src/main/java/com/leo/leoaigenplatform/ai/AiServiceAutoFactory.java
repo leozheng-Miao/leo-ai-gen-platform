@@ -2,7 +2,12 @@ package com.leo.leoaigenplatform.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.leo.leoaigenplatform.ai.tools.FileWriteTool;
+import com.leo.leoaigenplatform.exception.BusinessException;
+import com.leo.leoaigenplatform.exception.ErrorCode;
+import com.leo.leoaigenplatform.model.enums.CodeGenType;
 import com.leo.leoaigenplatform.service.ChatHistoryService;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -33,11 +38,13 @@ public class AiServiceAutoFactory {
     private ChatMemoryStore redisChatMemoryStore;
     @Resource
     private ChatHistoryService chatHistoryService;
+    @Resource
+    private StreamingChatModel reasoningStreamingChatModel;
 
     /**
      * Caffeine 内存从 Redis 中
      */
-    private final Cache<Long, AiGenCodeService> cache =
+    private final Cache<String, AiGenCodeService> cache =
             Caffeine.newBuilder()
                     .maximumSize(1000)
                     .expireAfterWrite(Duration.ofMinutes(30))
@@ -47,14 +54,20 @@ public class AiServiceAutoFactory {
                     })
                     .build();
 
-//    @Bean
-    public AiGenCodeService aiGenCodeService(long appId) {
-        return cache.get(appId, this::getAiGenCodeService);
+
+    public AiGenCodeService getAiGenCodeService(long appId, CodeGenType type) {
+        String key = buildCacheKey(appId, type);
+        return cache.get(key, k -> createAiCodeGeneratorService(appId, type));
     }
 
-
-    private AiGenCodeService getAiGenCodeService(long appId) {
-//        return AiServices.create(AiGenCodeService.class, chatModel);
+    /**
+     * 根据 传入 生成种类 调用不同服务生成 代码
+     *
+     * @param appId
+     * @param type
+     * @return
+     */
+    private AiGenCodeService createAiCodeGeneratorService(long appId, CodeGenType type) {
         log.info("为 appId = {} 创建新的 AI 服务实例", appId);
         MessageWindowChatMemory messageWindowChatMemory =
                 MessageWindowChatMemory
@@ -65,21 +78,32 @@ public class AiServiceAutoFactory {
                         .build();
 
         chatHistoryService.loadChatHistoryToMemory(appId, messageWindowChatMemory, 20);
-        return AiServices.builder(AiGenCodeService.class)
-                .chatModel(chatModel)
-                .streamingChatModel(openAiStreamingChatModel)
-                .chatMemory(messageWindowChatMemory)
-                .build();
-//        return AiServices.builder(AiGenCodeService.class)
-//                .chatModel(chatModel)
-//                .streamingChatModel(openAiStreamingChatModel)
-//                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.builder()
-//                        .chatMemoryStore(redisChatMemoryStore)
-//                        .maxMessages(20)
-//                        .id(memoryId)
-//                        .build())
-//                .build();
+        return switch (type) {
+            case VUE_PROJECT -> AiServices.builder(AiGenCodeService.class)
+                    .streamingChatModel(reasoningStreamingChatModel)
+                    .tools(new FileWriteTool())
+                    .chatMemoryProvider(memoryId -> messageWindowChatMemory) // 指定为 每个 memoryId绑定会话记忆
+                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
+                            toolExecutionRequest, "Error: there is no tool called" + toolExecutionRequest.name()
+                    ))
+                    .build();
+            case HTML, MULTI_FILE -> AiServices.builder(AiGenCodeService.class)
+                    .chatModel(chatModel)
+                    .streamingChatModel(openAiStreamingChatModel)
+                    .chatMemory(messageWindowChatMemory)
+                    .build();
+            default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持的类型" + type.getCode());
+        };
+    }
 
+    /**
+     * 兼容历史逻辑
+     *
+     * @param appId
+     * @return
+     */
+    public AiGenCodeService getAiGenCodeService(long appId) {
+        return getAiGenCodeService(appId, CodeGenType.HTML);
     }
 
     /**
@@ -88,6 +112,18 @@ public class AiServiceAutoFactory {
     @Bean
     public AiGenCodeService aiCodeGeneratorService() {
         return getAiGenCodeService(0L);
+    }
+
+
+    /**
+     * 根据 appId 和 生成代码种类构造 缓存 Key
+     *
+     * @param appId
+     * @param type
+     * @return
+     */
+    private String buildCacheKey(long appId, CodeGenType type) {
+        return appId + "_" + type.getCode();
     }
 
 
