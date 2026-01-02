@@ -87,6 +87,11 @@ const originItems = [
     title: '应用管理',
   },
   {
+    key: '/admin/chatManage',
+    label: '会话记录管理',
+    title: '会话记录管理',
+  },
+  {
     key: 'others',
     label: h('a', { href: 'https://www.codefather.cn', target: '_blank' }, '编程导航'),
     title: '编程导航',

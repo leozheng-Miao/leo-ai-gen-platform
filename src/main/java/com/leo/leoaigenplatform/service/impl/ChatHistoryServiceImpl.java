@@ -18,10 +18,15 @@ import com.leo.leoaigenplatform.service.ChatHistoryService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +38,7 @@ import java.util.List;
  * @since 1.0.1
  */
 @Service
+@Slf4j
 public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatHistory> implements ChatHistoryService {
 
     @Lazy
@@ -96,6 +102,127 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
         chatHistoryVOPage.setRecords(chatHistoryVOList);
 
         return chatHistoryVOPage;
+    }
+
+
+    /**
+     * 加载聊天历史到内存中
+     *
+     * @param appId      应用ID
+     * @param chatMemory 聊天记忆窗口对象
+     * @param maxCount   最大加载条数
+     * @return 实际加载的条数，异常时返回0
+     */
+    @Override
+    public int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory chatMemory, int maxCount) {
+        try {
+            // 构造查询条件，按创建时间倒序排列，并限制查询数量
+            QueryWrapper queryWrapper = new QueryWrapper()
+                    .eq(ChatHistory::getAppId, appId)  // 匹配指定应用ID
+                    .orderBy(ChatHistory::getCreateTime, false)  // 按创建时间降序排列
+                    .limit(1, maxCount);  // 设置查询范围，跳过最新的一条，加载maxCount条记录
+            // 执行查询获取聊天历史列表
+            List<ChatHistory> historyList = this.list(queryWrapper);
+            // 如果历史记录为空，直接返回0
+            if (CollUtil.isEmpty(historyList)) {
+                return 0;
+            }
+            //反转列表， 确保时间正序
+            historyList = historyList.reversed();
+            // 按时间顺序添加到记忆中
+            int loadedCount = 0;
+            //先清理里是缓存，防止重复加载
+            chatMemory.clear();
+            for (ChatHistory history : historyList) {
+                if (history.getMessageType().equals(MessageType.USER.getValue())) {
+                    chatMemory.add(UserMessage.from(history.getMessage()));
+                } else if (history.getMessageType().equals(MessageType.AI.getValue())) {
+                    chatMemory.add(AiMessage.from(history.getMessage()));
+                }
+                loadedCount++;
+            }
+            log.info("成功加载 {} 条对话历史到 应用 {} 中", loadedCount, appId);
+            return loadedCount;
+        } catch (Exception e) {
+            log.error("加载对话历史到应用 - {} 内存时发生异常, error: {}", appId, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 导入聊天记录
+     *
+     * @param appId
+     * @param loginUser
+     * @param exportPath
+     * @return
+     */
+    @Override
+    public boolean exportChatHistory(Long appId, LoginUser loginUser, String exportPath) {
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.PARAMS_ERROR, "用户不能为空");
+        ThrowUtils.throwIf(StrUtil.isBlank(exportPath), ErrorCode.PARAMS_ERROR, "导出路径不能为空");
+
+        // 权限校验
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+
+        boolean isAdmin = UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole());
+        boolean isCreator = app.getUserId().equals(loginUser.getId());
+        ThrowUtils.throwIf(!isAdmin && !isCreator, ErrorCode.NO_AUTH_ERROR, "无权导出该应用的对话历史");
+
+        // 查找聊天记录 - 按照时间正序
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .eq(ChatHistory::getAppId, appId)
+                .orderBy(ChatHistory::getCreateTime, true);
+
+
+        List<ChatHistory> chatHistoryList = this.list(queryWrapper);
+        if (CollUtil.isEmpty(chatHistoryList)) {
+            log.warn("应用 {} 没有聊天记录,跳过导出", appId);
+            return false;
+        }
+
+        // 生成 Markdown 内容
+        StringBuilder md = new StringBuilder();
+        md.append("# Chat History\n\n");
+        md.append("- AppId: ").append(appId).append("\n");
+        md.append("- Export Time: ").append(LocalDateTime.now()).append("\n\n");
+
+        for (ChatHistory history : chatHistoryList) {
+            String role = MessageType.USER.getValue().equals(history.getMessageType())
+                    ? "👤 User"
+                    : "🤖 AI";
+
+            md.append("## ").append(role)
+                    .append(" | ")
+                    .append(history.getCreateTime())
+                    .append("\n\n");
+
+            md.append(history.getMessage()).append("\n\n");
+        }
+
+        // 处理导出路径
+        try {
+            File targetFile;
+            if (exportPath.endsWith(".md")) {
+                targetFile = new File(exportPath);
+            } else {
+                File dir = new File(exportPath);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                targetFile = new File(dir, "chat-history-app-" + appId + ".md");
+            }
+
+            cn.hutool.core.io.FileUtil.writeUtf8String(md.toString(), targetFile);
+            log.info("成功导出聊天记录，appId={}, path={}", appId, targetFile.getAbsolutePath());
+            return true;
+        } catch (Exception e) {
+            log.error("导出聊天记录失败，appId={}, error={}", appId, e.getMessage(), e);
+            return false;
+        }
+
     }
 
     /**

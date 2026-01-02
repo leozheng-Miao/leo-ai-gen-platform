@@ -34,4 +34,17 @@ class AiGenCodeServiceTest {
         MultiJsonStructure result = aiGenCodeService.generateMulti(userMessage);
         Assertions.assertNotNull(result);
     }
+
+    @Test
+    void testChatMemory() {
+        HTMLJsonStructure result = aiGenCodeService.generateHTMLWithChatMemory(1, "做个程序员鱼皮的工具网站，总代码量不超过 20 行");
+        Assertions.assertNotNull(result);
+        result = aiGenCodeService.generateHTMLWithChatMemory(1, "不要生成网站，告诉我你刚刚做了什么？");
+        Assertions.assertNotNull(result);
+        result = aiGenCodeService.generateHTMLWithChatMemory(2, "做个程序员鱼皮的工具网站，总代码量不超过 20 行");
+        Assertions.assertNotNull(result);
+        result = aiGenCodeService.generateHTMLWithChatMemory(2, "不要生成网站，告诉我你刚刚做了什么？");
+//        Assertions.assertNotNull(result);
+    }
+
 }

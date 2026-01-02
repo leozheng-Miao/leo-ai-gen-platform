@@ -102,4 +102,21 @@ public class ChatHistoryController {
         return ResultUtils.success(result);
     }
 
+    /**
+     * 【用户】导出某个应用的对话历史到指定路径 （仅应用创建者和管理员可用）
+     * @param appId
+     * @param exportPath 需要导出的路径
+     * @param request
+     * @return
+     */
+    @PostMapping("/export/markdown")
+    public BaseResponse<Boolean> exportChatHistory(@RequestParam Long appId,
+                                                   @RequestParam String exportPath,
+                                                   HttpServletRequest request) {
+        LoginUser loginUser = userService.getLoginUser(request);
+        boolean result = chatHistoryService.exportChatHistory(appId, loginUser, exportPath);
+        return ResultUtils.success(result);
+
+    }
+
 }

@@ -2,6 +2,7 @@ package com.leo.leoaigenplatform.core;
 
 import cn.hutool.core.util.StrUtil;
 import com.leo.leoaigenplatform.ai.AiGenCodeService;
+import com.leo.leoaigenplatform.ai.AiServiceAutoFactory;
 import com.leo.leoaigenplatform.ai.jsonModel.HTMLJsonStructure;
 import com.leo.leoaigenplatform.ai.jsonModel.MultiJsonStructure;
 import com.leo.leoaigenplatform.core.parser.CodeParserExecutor;
@@ -28,6 +29,8 @@ import java.io.File;
 public class AiGenCodeFacade {
 
     @Resource
+    private AiServiceAutoFactory aiServiceAutoFactory;
+    @Resource
     private AiGenCodeService aiGenCodeService;
 
     /**
@@ -42,14 +45,14 @@ public class AiGenCodeFacade {
         if (codeType == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "codeType is null");
         }
-
+        AiGenCodeService service = aiServiceAutoFactory.aiGenCodeService(appId);
         return switch (codeType) {
             case HTML -> {
-                HTMLJsonStructure htmlJsonStructure = aiGenCodeService.generateHTML(userMessage);
+                HTMLJsonStructure htmlJsonStructure = service.generateHTML(userMessage);
                 yield SaveCodeExecutor.executeCodeSaver(codeType, htmlJsonStructure, appId);
             }
             case MULTI_FILE -> {
-                MultiJsonStructure multiJsonStructure = aiGenCodeService.generateMulti(userMessage);
+                MultiJsonStructure multiJsonStructure = service.generateMulti(userMessage);
                 yield SaveCodeExecutor.executeCodeSaver(codeType, multiJsonStructure, appId);
             }
             default -> {
@@ -72,6 +75,8 @@ public class AiGenCodeFacade {
         if (codeType == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "codeType is null");
         }
+
+        AiGenCodeService aiGenCodeService = aiServiceAutoFactory.aiGenCodeService(appId);
 
         return switch (codeType) {
             case HTML -> {

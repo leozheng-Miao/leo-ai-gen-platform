@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
 

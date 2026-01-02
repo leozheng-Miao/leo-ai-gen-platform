@@ -7,6 +7,7 @@ import com.leo.leoaigenplatform.model.vo.ChatHistoryVO;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,6 +35,10 @@ public interface ChatHistoryService extends IService<ChatHistory> {
     Page<ChatHistoryVO> listAppChatHistoryByPage(Long appId, int pageSize,
                                                  LocalDateTime lastCreateTime,
                                                  LoginUser loginUser);
+
+    int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory chatMemory, int maxCount);
+
+    boolean exportChatHistory(Long appId, LoginUser loginUser, String exportPath);
 
     QueryWrapper getQueryWrapper(ChatHistoryQueryRequest chatHistoryQueryRequest);
 
