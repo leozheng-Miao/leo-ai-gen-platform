@@ -31,6 +31,8 @@ public class ReasoningStreamingChatModelConfig {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .maxTokens(maxTokens)
+                .temperature(0.0) // 降低温度， 减少随机性
+                .topP(0.8) // 限制采样范围
                 .logRequests(true)
                 .logResponses(true)
                 .build();

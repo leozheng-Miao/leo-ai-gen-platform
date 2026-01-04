@@ -5,6 +5,7 @@ import com.leo.leoaigenplatform.ai.jsonModel.HTMLJsonStructure;
 import com.leo.leoaigenplatform.ai.jsonModel.MultiJsonStructure;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import reactor.core.publisher.Flux;
 
@@ -35,7 +36,7 @@ public interface AiGenCodeService {
     HTMLJsonStructure generateHTMLWithChatMemory(@MemoryId int memoryId, @UserMessage String userMessage);
 
     @SystemMessage(fromResource = "prompt/gen-vue-project-prompt.txt")
-    Flux<String> generateVueProjectStreaming(@MemoryId Long memoryId, @UserMessage String userMessage);
+    TokenStream generateVueProjectStreaming(@MemoryId Long memoryId, @UserMessage String userMessage);
 
 
 }

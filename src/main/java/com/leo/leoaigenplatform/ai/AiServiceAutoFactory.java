@@ -73,7 +73,7 @@ public class AiServiceAutoFactory {
                 MessageWindowChatMemory
                         .builder()
                         .id(appId)
-                        .maxMessages(20)
+                        .maxMessages(50)
                         .chatMemoryStore(redisChatMemoryStore)
                         .build();
 
@@ -86,6 +86,7 @@ public class AiServiceAutoFactory {
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called" + toolExecutionRequest.name()
                     ))
+                    .maxSequentialToolsInvocations(25)
                     .build();
             case HTML, MULTI_FILE -> AiServices.builder(AiGenCodeService.class)
                     .chatModel(chatModel)

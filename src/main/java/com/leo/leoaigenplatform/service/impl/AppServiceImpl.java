@@ -9,6 +9,8 @@ import cn.hutool.core.util.StrUtil;
 import com.leo.leoaigenplatform.constant.AppConstant;
 import com.leo.leoaigenplatform.constant.UserConstant;
 import com.leo.leoaigenplatform.core.AiGenCodeFacade;
+import com.leo.leoaigenplatform.core.builder.VueProjectBuilder;
+import com.leo.leoaigenplatform.core.handler.StreamHandlerExecutor;
 import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
 import com.leo.leoaigenplatform.exception.ThrowUtils;
@@ -64,6 +66,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ChatHistoryService chatHistoryService;
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     @Override
     public Flux<String> chatToGenCode(String userMessage, Long appId, LoginUser loginUser) {
@@ -82,53 +88,54 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         // 存储 AI 消息 aiMessage
         Flux<String> AIMessageStream = aiGenCodeFacade.generateAndSaveCodeStream(userMessage, type, appId);
-        StringBuilder codeBuilder = new StringBuilder();
-        return AIMessageStream
-                .map(chunk -> {
-                    codeBuilder.append(chunk);
-                    return chunk;
-                })
-                .doOnComplete(() -> {
-                    try {
-                        String completeCode = codeBuilder.toString();
-                        if (StrUtil.isNotBlank(completeCode)) {
-                            chatHistoryService.addChatMessage(appId, completeCode, MessageType.AI.getValue(), loginUser.getId(), null);
-                        }
-                    } catch (Exception e) {
-                        log.error("文件保存失败: {}", e.getMessage());
-                    }
-                })
-                .doOnError(e -> {
-                    String errorMessage = "AI生成代码失败: " + e.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, MessageType.AI.getValue(), loginUser.getId(), null);
-                    log.error("AI生成代码失败: {}", e.getMessage());
-                });
+        return streamHandlerExecutor.doExecute(AIMessageStream, chatHistoryService, appId, loginUser, type);
     }
 
     @Override
     public String deployApp(Long appId, LoginUser loginUser) {
+        //1. 参数校验
         ThrowUtils.throwIf(appId == null, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
         ThrowUtils.throwIf(appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID必须大于0");
+        //2. 查询应用信息
         App currApp = this.getById(appId);
         ThrowUtils.throwIf(currApp == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        //3. 权限校验
         ThrowUtils.throwIf(!currApp.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "无权限部署此应用");
+        //4. 检查是否已有 deployKey
         String deployKey = currApp.getDeployKey();
+        // 若没有 deployKey 则生成
         if (StrUtil.isBlank(deployKey)) {
             deployKey = RandomUtil.randomString(6);
         }
+
+        //5. 获取代码生成类型， 获取原始代码生成路径 （应用访问目录）
         String codeGenType = currApp.getCodeGenType();
         String originCodePath = AppConstant.FILE_SAVE_ROOT_DIR + File.separator + codeGenType + "_" + appId;
+
+        //6. 检查路径是否存在
         File originCodeFile = new File(originCodePath);
         if (!originCodeFile.exists()) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "应用代码不存在");
         }
+        //7. 检查是否是 vue 项目 - 执行构建
+        CodeGenType codeGenTypeEnum = CodeGenType.of(codeGenType);
+        // 若是，则使用 vueProjectBuilder 部署项目，并将文件改为 dist 目录下
+        if (codeGenTypeEnum == CodeGenType.VUE_PROJECT) {
+            boolean buildSuccess = vueProjectBuilder.buildProject(originCodePath);
+            ThrowUtils.throwIf(!buildSuccess, ErrorCode.SYSTEM_ERROR, "Vue项目构建失败");
+            File dist = new File(originCodePath, "dist");
+            ThrowUtils.throwIf(!dist.exists(), ErrorCode.SYSTEM_ERROR, "Vue 构建项目完成但 未生成 dist 目录");
+            originCodeFile = dist;
+            log.info("Vue 项目构建成功， 将部署 dist目录：{}", dist.getAbsolutePath());
+        }
+        //8. 复制文件到部署目录
         String localCodePath = AppConstant.FILE_DEPLOY_ROOT_DIR + File.separator + deployKey;
         try {
             FileUtil.copyContent(originCodeFile, new File(localCodePath), true);
         } catch (IORuntimeException e) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "部署应用转移文件失败" + e.getMessage());
         }
-        // 更新数据库
+        //9. 更新数据库
         App app = new App();
         app.setId(appId);
         app.setDeployKey(deployKey);
@@ -159,7 +166,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         App app = new App();
         BeanUtil.copyProperties(appAddRequest, app);
         app.setUserId(loginUser.getId());
-        app.setCodeGenType(CodeGenType.MULTI_FILE.getCode());
+        app.setCodeGenType(CodeGenType.VUE_PROJECT.getCode());
         app.setAppName(appName);
         boolean save = this.save(app);
         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "创建应用失败");
@@ -377,7 +384,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
                 .collect(Collectors.toSet());
         Map<Long, UserVO> userVOMap = userService.listByIds(userIds).stream()
                 .collect(Collectors.toMap(User::getId, userService::getUserVO));
-        return appList.stream().map( app -> {
+        return appList.stream().map(app -> {
             AppVO appVO = getAppVO(app);
             UserVO userVO = userVOMap.get(app.getUserId());
             appVO.setUserVO(userVO);
