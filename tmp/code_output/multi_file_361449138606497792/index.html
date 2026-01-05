@@ -5,85 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>科学计算器</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
 </head>
 <body>
     <div class="calculator-container">
-        <header>
-            <h1><i class="fas fa-calculator"></i> 科学计算器</h1>
-            <p class="subtitle">支持基本运算和高级功能</p>
+        <header class="calculator-header">
+            <h1>科学计算器</h1>
+            <p class="subtitle">支持基本运算和科学计算功能</p>
         </header>
         
-        <main>
-            <div class="calculator">
-                <!-- 显示屏 -->
-                <div class="display">
-                    <div class="previous-operand" id="previous-operand"></div>
-                    <div class="current-operand" id="current-operand">0</div>
-                </div>
-                
-                <!-- 按钮区域 -->
-                <div class="buttons">
-                    <!-- 第一行：高级功能 -->
-                    <button class="btn operator" data-action="clear">C</button>
-                    <button class="btn operator" data-action="backspace">
-                        <i class="fas fa-backspace"></i>
-                    </button>
-                    <button class="btn operator" data-action="percentage">%</button>
-                    <button class="btn operator" data-action="divide">÷</button>
-                    
-                    <!-- 第二行 -->
-                    <button class="btn" data-number="7">7</button>
-                    <button class="btn" data-number="8">8</button>
-                    <button class="btn" data-number="9">9</button>
-                    <button class="btn operator" data-action="multiply">×</button>
-                    
-                    <!-- 第三行 -->
-                    <button class="btn" data-number="4">4</button>
-                    <button class="btn" data-number="5">5</button>
-                    <button class="btn" data-number="6">6</button>
-                    <button class="btn operator" data-action="subtract">-</button>
-                    
-                    <!-- 第四行 -->
-                    <button class="btn" data-number="1">1</button>
-                    <button class="btn" data-number="2">2</button>
-                    <button class="btn" data-number="3">3</button>
-                    <button class="btn operator" data-action="add">+</button>
-                    
-                    <!-- 第五行 -->
-                    <button class="btn" data-number="0">0</button>
-                    <button class="btn" data-action="decimal">.</button>
-                    <button class="btn equals" data-action="equals">=</button>
-                </div>
-                
-                <!-- 计算历史 -->
-                <div class="history">
-                    <h3><i class="fas fa-history"></i> 计算历史</h3>
-                    <ul id="history-list">
-                        <!-- 历史记录将在这里动态添加 -->
-                    </ul>
-                    <button class="btn-clear-history" id="clear-history">清除历史</button>
-                </div>
+        <main class="calculator">
+            <!-- 显示屏区域 -->
+            <div class="display">
+                <div class="previous-operand" id="previous-operand"></div>
+                <div class="current-operand" id="current-operand">0</div>
             </div>
             
-            <!-- 使用说明 -->
-            <div class="instructions">
-                <h3><i class="fas fa-info-circle"></i> 使用说明</h3>
-                <ul>
-                    <li>点击数字按钮输入数字</li>
-                    <li>点击运算符按钮选择运算</li>
-                    <li>点击 "=" 按钮计算结果</li>
-                    <li>点击 "C" 按钮清除当前计算</li>
-                    <li>点击 <i class="fas fa-backspace"></i> 按钮删除最后一个字符</li>
-                </ul>
+            <!-- 按钮区域 -->
+            <div class="buttons">
+                <!-- 第一行：高级功能 -->
+                <button class="btn operator" data-action="clear">C</button>
+                <button class="btn operator" data-action="backspace">⌫</button>
+                <button class="btn operator" data-action="percentage">%</button>
+                <button class="btn operator" data-action="divide">÷</button>
+                
+                <!-- 第二行 -->
+                <button class="btn" data-number="7">7</button>
+                <button class="btn" data-number="8">8</button>
+                <button class="btn" data-number="9">9</button>
+                <button class="btn operator" data-action="multiply">×</button>
+                
+                <!-- 第三行 -->
+                <button class="btn" data-number="4">4</button>
+                <button class="btn" data-number="5">5</button>
+                <button class="btn" data-number="6">6</button>
+                <button class="btn operator" data-action="subtract">-</button>
+                
+                <!-- 第四行 -->
+                <button class="btn" data-number="1">1</button>
+                <button class="btn" data-number="2">2</button>
+                <button class="btn" data-number="3">3</button>
+                <button class="btn operator" data-action="add">+</button>
+                
+                <!-- 第五行 -->
+                <button class="btn" data-number="0">0</button>
+                <button class="btn" data-action="decimal">.</button>
+                <button class="btn operator" data-action="calculate">=</button>
+            </div>
+            
+            <!-- 状态指示器 -->
+            <div class="status">
+                <div class="status-indicator" id="status-indicator">就绪</div>
             </div>
         </main>
         
-        <footer>
-            <p>© 2023 科学计算器 | 使用原生 HTML, CSS 和 JavaScript 构建</p>
+        <footer class="calculator-footer">
+            <p>使用说明：点击数字和运算符进行计算，C键清除所有，⌫键删除最后一位</p>
         </footer>
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>

@@ -37,6 +37,13 @@ public interface AppService extends IService<App> {
     String deployApp(Long appId, LoginUser loginUser);
 
     /**
+     * 虚拟线程生成应用封面并更新封面
+     * @param appId
+     * @param url
+     */
+    void generateAppScreenshotAsync(Long appId, String url);
+
+    /**
      * 创建应用
      *
      * @param appAddRequest 应用添加请求

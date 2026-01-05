@@ -14,6 +14,7 @@ import com.leo.leoaigenplatform.core.handler.StreamHandlerExecutor;
 import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
 import com.leo.leoaigenplatform.exception.ThrowUtils;
+import com.leo.leoaigenplatform.manager.CosManager;
 import com.leo.leoaigenplatform.mapper.AppMapper;
 import com.leo.leoaigenplatform.model.dto.app.AppAddRequest;
 import com.leo.leoaigenplatform.model.dto.app.AppAdminQueryRequest;
@@ -29,6 +30,7 @@ import com.leo.leoaigenplatform.model.vo.AppVO;
 import com.leo.leoaigenplatform.model.vo.UserVO;
 import com.leo.leoaigenplatform.service.AppService;
 import com.leo.leoaigenplatform.service.ChatHistoryService;
+import com.leo.leoaigenplatform.service.ScreenshotService;
 import com.leo.leoaigenplatform.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -36,6 +38,7 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -58,6 +61,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
+    @Value("${code.deploy-host:http://localhost:8090}")
+    private String deployHost;
     @Resource
     private UserService userService;
 
@@ -70,6 +75,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private StreamHandlerExecutor streamHandlerExecutor;
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+    @Resource
+    private ScreenshotService screenshotService;
+    @Resource
+    private CosManager cosManager;
 
     @Override
     public Flux<String> chatToGenCode(String userMessage, Long appId, LoginUser loginUser) {
@@ -142,8 +151,32 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setDeployedTime(LocalDateTime.now());
         boolean result = this.updateById(app);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
-        return localCodePath;
+        //10. 构建 应用访问 url
+        String appDeployUrl = String.format("%s/%s/", deployHost, deployKey);
+        //11. 异步生成应用封面
+        generateAppScreenshotAsync(appId, appDeployUrl);
+        return appDeployUrl;
     }
+
+    /**
+     * 虚拟线程生成应用封面并更新封面
+     * @param appId
+     * @param url
+     */
+    @Override
+    public void generateAppScreenshotAsync(Long appId, String url) {
+        Thread.startVirtualThread(() -> {
+            String cosUrl = screenshotService.generateAddUploadScreenshot(url);
+            ThrowUtils.throwIf(StrUtil.isBlank(cosUrl), ErrorCode.OPERATION_ERROR, "生成截图服务失败");
+            // 更新 app 信息到数据库
+            App app = new App();
+            app.setCover(cosUrl);
+            app.setId(appId);
+            boolean result = this.updateById(app);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新应用截图信息失败");
+        });
+    }
+
 
     @Override
     public Long addApp(AppAddRequest appAddRequest, HttpServletRequest request) {
@@ -215,10 +248,16 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (!app.getUserId().equals(loginUser.getId()) && !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限删除此应用");
         }
+        // 获取 应用封面图访问路径
+        String coverUrl = app.getCover();
         // 删除应用
         boolean deleteAppResult = this.removeById(id);
         ThrowUtils.throwIf(!deleteAppResult, ErrorCode.OPERATION_ERROR);
-
+        // 删除 cos 封面图
+        if (StrUtil.isNotBlank(coverUrl)) {
+            String objectKeyName = coverUrl.substring(coverUrl.indexOf("screenshots"));
+            cosManager.deleteObject(objectKeyName);
+        }
         return true;
     }
 
@@ -234,7 +273,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
 
         // 验证是否为应用所有者
-        ThrowUtils.throwIf(!app.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "无权限查看此应用");
+        ThrowUtils.throwIf(!app.getUserId().equals(loginUser.getId()) || !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole()), ErrorCode.NO_AUTH_ERROR, "无权限查看此应用");
 
         return getAppVO(app);
     }
@@ -295,10 +334,16 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 查询应用
         App app = this.getById(id);
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        // 获取 应用封面图访问路径
+        String coverUrl = app.getCover();
         // 删除应用
         boolean result = this.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-
+        // 删除 cos 封面图
+        if (StrUtil.isNotBlank(coverUrl)) {
+            String objectKeyName = coverUrl.substring(coverUrl.indexOf("screenshots"));
+            cosManager.deleteObject(objectKeyName);
+        }
         return true;
     }
 
