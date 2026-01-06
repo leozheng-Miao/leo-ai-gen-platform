@@ -6,6 +6,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.leo.leoaigenplatform.ai.AiCodeGenTypeRoutingService;
 import com.leo.leoaigenplatform.constant.AppConstant;
 import com.leo.leoaigenplatform.constant.UserConstant;
 import com.leo.leoaigenplatform.core.AiGenCodeFacade;
@@ -79,6 +80,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private ScreenshotService screenshotService;
     @Resource
     private CosManager cosManager;
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
 
     @Override
     public Flux<String> chatToGenCode(String userMessage, Long appId, LoginUser loginUser) {
@@ -160,6 +163,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     /**
      * 虚拟线程生成应用封面并更新封面
+     *
      * @param appId
      * @param url
      */
@@ -181,12 +185,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Override
     public Long addApp(AppAddRequest appAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
-        String appName = appAddRequest.getAppName();
         String initPrompt = appAddRequest.getInitPrompt();
-        if (StrUtil.isBlank(appName)) {
-            appName = aiGenCodeFacade.generateAppName(initPrompt);
-        }
-
+//        String appName = appAddRequest.getAppName();
+        String appName = initPrompt.substring(0, 8);
+//        if (StrUtil.isBlank(appName)) {
+//            appName = aiGenCodeFacade.generateAppName(initPrompt);
+//        }
         // 校验参数
         if (StrUtil.isBlank(initPrompt)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "initPrompt不能为空");
@@ -199,7 +203,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         App app = new App();
         BeanUtil.copyProperties(appAddRequest, app);
         app.setUserId(loginUser.getId());
-        app.setCodeGenType(CodeGenType.VUE_PROJECT.getCode());
+        // 使用 AI 智能选择代码生成类型
+        CodeGenType codeGenType = aiCodeGenTypeRoutingService.generateGenTypeBasedOnInitPrompt(initPrompt);
+        app.setCodeGenType(codeGenType.getCode());
         app.setAppName(appName);
         boolean save = this.save(app);
         ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "创建应用失败");
