@@ -181,6 +181,10 @@ declare namespace API {
     id?: number
   }
 
+  type downloadAppCodeParams = {
+    appId: number
+  }
+
   type exportChatHistoryParams = {
     appId: number
     exportPath: string

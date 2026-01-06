@@ -5,23 +5,40 @@ import com.leo.leoaigenplatform.annotation.AuthCheck;
 import com.leo.leoaigenplatform.common.BaseResponse;
 import com.leo.leoaigenplatform.common.DeleteRequest;
 import com.leo.leoaigenplatform.common.ResultUtils;
+import com.leo.leoaigenplatform.constant.AppConstant;
 import com.leo.leoaigenplatform.constant.UserConstant;
+import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
 import com.leo.leoaigenplatform.exception.ThrowUtils;
-import com.leo.leoaigenplatform.model.dto.app.*;
+import com.leo.leoaigenplatform.model.dto.app.AppAddRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppAdminQueryRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppAdminUpdateRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppDeployRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppQueryRequest;
+import com.leo.leoaigenplatform.model.dto.app.AppUpdateRequest;
 import com.leo.leoaigenplatform.model.dto.user.LoginUser;
+import com.leo.leoaigenplatform.model.entity.App;
 import com.leo.leoaigenplatform.model.vo.AppVO;
 import com.leo.leoaigenplatform.service.AppService;
+import com.leo.leoaigenplatform.service.ProjectDownloadService;
 import com.leo.leoaigenplatform.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -38,6 +55,8 @@ public class AppController {
     private AppService appService;
     @Resource
     private UserService userService;
+    @Resource
+    private ProjectDownloadService projectDownloadService;
 
     /**
      * 应用聊天生成代码 - SSE
@@ -88,6 +107,41 @@ public class AppController {
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
         Long id = appService.addApp(appAddRequest, request);
         return ResultUtils.success(id);
+    }
+
+    /**
+     * 下载应用代码
+     *
+     * @param appId    应用ID
+     * @param request  请求
+     * @param response 响应
+     */
+    @GetMapping("/download/{appId}")
+    public void downloadAppCode(@PathVariable Long appId,
+                                HttpServletRequest request,
+                                HttpServletResponse response) {
+        // 1. 基础校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
+        // 2. 查询应用信息
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+        // 3. 权限校验：只有应用创建者可以下载代码
+        LoginUser loginUser = userService.getLoginUser(request);
+        if (!app.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限下载该应用代码");
+        }
+        // 4. 构建应用代码目录路径（生成目录，非部署目录）
+        String codeGenType = app.getCodeGenType();
+        String sourceDirName = codeGenType + "_" + appId;
+        String sourceDirPath = AppConstant.FILE_SAVE_ROOT_DIR + File.separator + sourceDirName;
+        // 5. 检查代码目录是否存在
+        File sourceDir = new File(sourceDirPath);
+        ThrowUtils.throwIf(!sourceDir.exists() || !sourceDir.isDirectory(),
+                ErrorCode.NOT_FOUND_ERROR, "应用代码不存在，请先生成代码");
+        // 6. 生成下载文件名（不建议添加中文内容）
+        String downloadFileName = String.valueOf(appId);
+        // 7. 调用通用下载服务
+        projectDownloadService.downloadProjectAsZip(sourceDirPath, downloadFileName, response);
     }
 
     /**
