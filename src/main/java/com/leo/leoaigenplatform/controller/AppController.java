@@ -61,18 +61,18 @@ public class AppController {
     /**
      * 应用聊天生成代码 - SSE
      * @param appId
-     * @param userMessage
+     * @param message
      * @param request
      * @return
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
-                                                    @RequestParam String userMessage,
+                                                    @RequestParam String message,
                                                     HttpServletRequest request) {
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR);
-        ThrowUtils.throwIf(userMessage == null || userMessage.isEmpty(), ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(message == null || message.isEmpty(), ErrorCode.PARAMS_ERROR);
         LoginUser loginUser = userService.getLoginUser(request);
-        Flux<String> result = appService.chatToGenCode(userMessage, appId, loginUser);
+        Flux<String> result = appService.chatToGenCode(message, appId, loginUser);
         return result.map(chunk -> {
             Map<String, String> wrapper = Map.of("d", chunk);
             String jsonStr = JSONUtil.toJsonStr(wrapper);

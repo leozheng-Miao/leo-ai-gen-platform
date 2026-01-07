@@ -28,3 +28,4 @@ import GlobalFooter from '@/components/GlobalFooter.vue'
   margin: 0;
 }
 </style>
+
