@@ -1,5 +1,6 @@
 package com.leo.leoaigenplatform.ai;
 
+import com.leo.leoaigenplatform.ai.service.AiCodeGenTypeRoutingService;
 import com.leo.leoaigenplatform.model.enums.CodeGenType;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;

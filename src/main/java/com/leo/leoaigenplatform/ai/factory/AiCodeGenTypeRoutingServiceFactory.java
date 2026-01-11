@@ -1,5 +1,6 @@
-package com.leo.leoaigenplatform.ai;
+package com.leo.leoaigenplatform.ai.factory;
 
+import com.leo.leoaigenplatform.ai.service.AiCodeGenTypeRoutingService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;

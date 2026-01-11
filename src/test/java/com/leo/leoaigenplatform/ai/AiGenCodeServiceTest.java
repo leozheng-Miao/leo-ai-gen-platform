@@ -2,6 +2,7 @@ package com.leo.leoaigenplatform.ai;
 
 import com.leo.leoaigenplatform.ai.jsonModel.HTMLJsonStructure;
 import com.leo.leoaigenplatform.ai.jsonModel.MultiJsonStructure;
+import com.leo.leoaigenplatform.ai.service.AiGenCodeService;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

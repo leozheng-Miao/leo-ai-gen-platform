@@ -1,4 +1,4 @@
-package com.leo.leoaigenplatform.ai;
+package com.leo.leoaigenplatform.ai.service;
 
 import com.leo.leoaigenplatform.ai.jsonModel.AppNameJson;
 import com.leo.leoaigenplatform.ai.jsonModel.HTMLJsonStructure;
@@ -17,25 +17,25 @@ import reactor.core.publisher.Flux;
  **/
 public interface AiGenCodeService {
 
-    @SystemMessage(fromResource = "prompt/gen-html-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-html-prompt.txt")
     HTMLJsonStructure generateHTML(String userMessage);
 
-    @SystemMessage(fromResource = "prompt/gen-multi-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-multi-prompt.txt")
     MultiJsonStructure generateMulti(String userMessage);
 
-    @SystemMessage(fromResource = "prompt/gen-html-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-html-prompt.txt")
     Flux<String> generateHTMLStream(String userMessage);
 
-    @SystemMessage(fromResource = "prompt/gen-multi-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-multi-prompt.txt")
     Flux<String> generateMultiStream(String userMessage);
 
     @SystemMessage(fromResource = "prompt/gen-app-name.txt")
     AppNameJson generateAppName(String userMessage);
 
-    @SystemMessage(fromResource = "prompt/gen-html-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-html-prompt.txt")
     HTMLJsonStructure generateHTMLWithChatMemory(@MemoryId int memoryId, @UserMessage String userMessage);
 
-    @SystemMessage(fromResource = "prompt/gen-vue-project-prompt.txt")
+    @SystemMessage(fromResource = "prompt/gen-code-prompt/gen-vue-project-prompt.txt")
     TokenStream generateVueProjectStreaming(@MemoryId Long memoryId, @UserMessage String userMessage);
 
 

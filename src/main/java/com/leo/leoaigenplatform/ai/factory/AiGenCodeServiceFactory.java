@@ -1,8 +1,9 @@
-package com.leo.leoaigenplatform.ai;
+package com.leo.leoaigenplatform.ai.factory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.leo.leoaigenplatform.ai.tools.FileWriteTool;
+import com.leo.leoaigenplatform.ai.service.AiGenCodeService;
+import com.leo.leoaigenplatform.ai.tools.ToolManager;
 import com.leo.leoaigenplatform.exception.BusinessException;
 import com.leo.leoaigenplatform.exception.ErrorCode;
 import com.leo.leoaigenplatform.model.enums.CodeGenType;
@@ -28,7 +29,7 @@ import java.time.Duration;
  **/
 @Configuration
 @Slf4j
-public class AiServiceAutoFactory {
+public class AiGenCodeServiceFactory {
 
     @Resource
     private ChatModel chatModel;
@@ -40,6 +41,8 @@ public class AiServiceAutoFactory {
     private ChatHistoryService chatHistoryService;
     @Resource
     private StreamingChatModel reasoningStreamingChatModel;
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * Caffeine 内存从 Redis 中
@@ -81,7 +84,7 @@ public class AiServiceAutoFactory {
         return switch (type) {
             case VUE_PROJECT -> AiServices.builder(AiGenCodeService.class)
                     .streamingChatModel(reasoningStreamingChatModel)
-                    .tools(new FileWriteTool())
+                    .tools(toolManager.getAllTools())
                     .chatMemoryProvider(memoryId -> messageWindowChatMemory) // 指定为 每个 memoryId绑定会话记忆
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called" + toolExecutionRequest.name()

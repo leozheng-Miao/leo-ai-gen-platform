@@ -6,7 +6,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import com.leo.leoaigenplatform.ai.AiCodeGenTypeRoutingService;
+import com.leo.leoaigenplatform.ai.service.AiCodeGenTypeRoutingService;
 import com.leo.leoaigenplatform.constant.AppConstant;
 import com.leo.leoaigenplatform.constant.UserConstant;
 import com.leo.leoaigenplatform.core.AiGenCodeFacade;

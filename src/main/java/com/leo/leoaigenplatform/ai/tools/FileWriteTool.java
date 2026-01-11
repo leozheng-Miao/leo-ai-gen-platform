@@ -1,10 +1,13 @@
 package com.leo.leoaigenplatform.ai.tools;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONObject;
 import com.leo.leoaigenplatform.constant.AppConstant;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolMemoryId;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +21,8 @@ import java.nio.file.StandardOpenOption;
  * @date: 2026-01-02 13:25
  **/
 @Slf4j
-public class FileWriteTool {
+@Component
+public class FileWriteTool extends BaseTool{
 
     @Tool("写入文件到指定路径")
     public String writeFile(@P("文件相对路径") String relativePath,
@@ -47,5 +51,29 @@ public class FileWriteTool {
             log.error(errorMessage,e);
             return errorMessage;
         }
+    }
+
+    @Override
+    public String getToolName() {
+        return "writeFile";
+    }
+
+    @Override
+    public String getToolCnName() {
+        return "写入文件";
+    }
+
+    @Override
+    public String getToolExecutionResult(JSONObject arguments) {
+        String relativePath = arguments.getStr("relativePath");
+        String content = arguments.getStr("content");
+        String suffix = FileUtil.getSuffix(relativePath);
+        return String.format("""
+                        [工具调用] %s %s
+                        ```%s
+                        %s
+                        ```
+                        """, getToolCnName(), relativePath, suffix, content);
+
     }
 }

@@ -1,4 +1,4 @@
-package com.leo.leoaigenplatform.ai;
+package com.leo.leoaigenplatform.ai.service;
 
 import com.leo.leoaigenplatform.model.enums.CodeGenType;
 import dev.langchain4j.service.SystemMessage;

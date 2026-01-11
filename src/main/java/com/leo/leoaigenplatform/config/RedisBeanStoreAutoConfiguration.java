@@ -1,4 +1,4 @@
-package com.leo.leoaigenplatform.ai;
+package com.leo.leoaigenplatform.config;
 
 import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
 import lombok.Data;
